@@ -12,7 +12,7 @@ RGB_TO_KML_COLOR <- function(r_color, alpha = 1) {
   # alpha: 0-1 scale, where 0 = transparent, 1 = opaque
   
   # Convert color name or hex to RGB
-  rgb_vals <- col2rgb(r_color)
+  rgb_vals <- grDevices::col2rgb(r_color)
   
   # Extract components
   r <- rgb_vals[1, 1]
@@ -37,8 +37,8 @@ GENERATE_COLOR_MAPPING <- function(sf_object,
   
   # Extract field values (drop geometry for performance)
   field_values <- sf_object %>%
-    st_drop_geometry() %>%
-    pull(!!sym(color_field))
+    sf::st_drop_geometry() %>%
+    dplyr::pull(!!rlang::sym(color_field))
   
   # Determine field type
   is_numeric <- is.numeric(field_values)
@@ -51,7 +51,7 @@ GENERATE_COLOR_MAPPING <- function(sf_object,
     
     # Default palette for continuous data
     if (is.null(color_palette)) {
-      color_palette <- viridis(n_bins)
+      color_palette <- viridisLite::viridis(n_bins)
     } else if (is.function(color_palette)) {
       color_palette <- color_palette(n_bins)
     }
@@ -82,7 +82,7 @@ GENERATE_COLOR_MAPPING <- function(sf_object,
       } else {
         # Fallback to rainbow if pals not available
         message("Note: Install 'pals' package for better categorical color palettes")
-        color_palette <- rainbow(n_values)
+        color_palette <- grDevices::rainbow(n_values)
       }
     } else if (is.function(color_palette)) {
       color_palette <- color_palette(n_values)
@@ -92,7 +92,7 @@ GENERATE_COLOR_MAPPING <- function(sf_object,
     }
     
     # Create named vector
-    color_map <- setNames(color_palette, unique_values)
+    color_map <- stats::setNames(color_palette, unique_values)
     
     color_mapping <- list(
       type = "categorical",
@@ -131,7 +131,7 @@ GET_COLOR_FOR_VALUE <- function(value, color_mapping) {
 
 # Helper function: Detect geometry type------
 GET_GEOMETRY_TYPE <- function(sf_object) {
-  geom_types <- st_geometry_type(sf_object) %>% unique() %>% as.character()
+  geom_types <- sf::st_geometry_type(sf_object) %>% unique() %>% as.character()
   
   # Simplify to basic types
   if (any(grepl("POINT", geom_types, ignore.case = TRUE))) {
@@ -227,24 +227,24 @@ REMOVE_EMPTY_PLACEMARK_STYLES <- function(kml_doc) {
   # This function removes those empty inline styles
   
   # Find all Placemark nodes
-  placemarks <- xml_find_all(kml_doc, "//d1:Placemark", xml_ns(kml_doc))
+  placemarks <- xml2::xml_find_all(kml_doc, "//d1:Placemark", xml2::xml_ns(kml_doc))
   
   if (length(placemarks) == 0) {
-    placemarks <- xml_find_all(kml_doc, "//Placemark")
+    placemarks <- xml2::xml_find_all(kml_doc, "//Placemark")
   }
   
   # Remove inline Style elements from each Placemark
   for (placemark in placemarks) {
     # Find Style child (not styleUrl)
-    inline_styles <- xml_find_all(placemark, "./d1:Style", xml_ns(kml_doc))
+    inline_styles <- xml2::xml_find_all(placemark, "./d1:Style", xml2::xml_ns(kml_doc))
     
     if (length(inline_styles) == 0) {
-      inline_styles <- xml_find_all(placemark, "./Style")
+      inline_styles <- xml2::xml_find_all(placemark, "./Style")
     }
     
     # Remove each inline Style element
     for (style_node in inline_styles) {
-      xml_remove(style_node)
+      xml2::xml_remove(style_node)
     }
   }
   
@@ -260,44 +260,44 @@ CLEAN_SCHEMA_NAMES <- function(kml_doc, clean_name = "features") {
   # This function replaces with a clean name
   
   # Find Schema element
-  schema <- xml_find_first(kml_doc, "//d1:Schema", xml_ns(kml_doc))
+  schema <- xml2::xml_find_first(kml_doc, "//d1:Schema", xml2::xml_ns(kml_doc))
   
   if (length(schema) == 0) {
-    schema <- xml_find_first(kml_doc, "//Schema")
+    schema <- xml2::xml_find_first(kml_doc, "//Schema")
   }
   
   if (length(schema) > 0) {
     # Get old schema name
-    old_name <- xml_attr(schema, "name")
+    old_name <- xml2::xml_attr(schema, "name")
     
     if (!is.na(old_name) && old_name != clean_name) {
       # Update Schema attributes
-      xml_set_attr(schema, "name", clean_name)
-      xml_set_attr(schema, "id", clean_name)
+      xml2::xml_set_attr(schema, "name", clean_name)
+      xml2::xml_set_attr(schema, "id", clean_name)
       
       # Update Folder name (if it matches old schema name)
-      folders <- xml_find_all(kml_doc, "//d1:Folder/d1:name", xml_ns(kml_doc))
+      folders <- xml2::xml_find_all(kml_doc, "//d1:Folder/d1:name", xml2::xml_ns(kml_doc))
       
       if (length(folders) == 0) {
-        folders <- xml_find_all(kml_doc, "//Folder/name")
+        folders <- xml2::xml_find_all(kml_doc, "//Folder/name")
       }
       
       for (folder_name in folders) {
-        if (xml_text(folder_name) == old_name) {
-          xml_set_text(folder_name, clean_name)
+        if (xml2::xml_text(folder_name) == old_name) {
+          xml2::xml_set_text(folder_name, clean_name)
         }
       }
       
       # Remove SchemaData schemaUrl references (prevents "features:" prefix in popup)
-      schema_data <- xml_find_all(kml_doc, "//d1:SchemaData", xml_ns(kml_doc))
+      schema_data <- xml2::xml_find_all(kml_doc, "//d1:SchemaData", xml2::xml_ns(kml_doc))
       
       if (length(schema_data) == 0) {
-        schema_data <- xml_find_all(kml_doc, "//SchemaData")
+        schema_data <- xml2::xml_find_all(kml_doc, "//SchemaData")
       }
       
       for (sd in schema_data) {
         # Remove schemaUrl attribute entirely to avoid prefix in Google Earth
-        xml_set_attr(sd, "schemaUrl", NULL)
+        xml2::xml_set_attr(sd, "schemaUrl", NULL)
       }
       
       message(paste0("Cleaned schema name: '", old_name, "' -> '", clean_name, "' (removed schemaUrl prefix)"))
@@ -323,10 +323,10 @@ INJECT_STYLES_INTO_KML <- function(kml_doc,
                                    icon_scale = 1.0) {
   
   # Find Document node
-  doc_node <- xml_find_first(kml_doc, "//d1:Document", xml_ns(kml_doc))
+  doc_node <- xml2::xml_find_first(kml_doc, "//d1:Document", xml2::xml_ns(kml_doc))
   
   if (length(doc_node) == 0) {
-    doc_node <- xml_find_first(kml_doc, "//Document")
+    doc_node <- xml2::xml_find_first(kml_doc, "//Document")
   }
   
   # If no color_field specified, create single default style
@@ -341,8 +341,8 @@ INJECT_STYLES_INTO_KML <- function(kml_doc,
   
   # Get unique values from color field
   field_values <- sf_object %>%
-    st_drop_geometry() %>%
-    pull(!!sym(color_field))
+    sf::st_drop_geometry() %>%
+    dplyr::pull(!!rlang::sym(color_field))
   
   unique_values <- unique(field_values)
   unique_values <- unique_values[!is.na(unique_values)]
@@ -376,18 +376,18 @@ INJECT_STYLES_INTO_KML <- function(kml_doc,
     )
     
     # Parse and add to document
-    style_node <- read_xml(style_xml_text)
-    xml_add_child(doc_node, style_node, .where = 0)  # Add at beginning
+    style_node <- xml2::read_xml(style_xml_text)
+    xml2::xml_add_child(doc_node, style_node, .where = 0)  # Add at beginning
     
     # Store mapping
     style_map[[as.character(value)]] <- style_id
   }
   
   # Now assign styleUrl to each Placemark
-  placemarks <- xml_find_all(kml_doc, "//d1:Placemark", xml_ns(kml_doc))
+  placemarks <- xml2::xml_find_all(kml_doc, "//d1:Placemark", xml2::xml_ns(kml_doc))
   
   if (length(placemarks) == 0) {
-    placemarks <- xml_find_all(kml_doc, "//Placemark")
+    placemarks <- xml2::xml_find_all(kml_doc, "//Placemark")
   }
   
   # Match placemarks to features by index
@@ -403,18 +403,18 @@ INJECT_STYLES_INTO_KML <- function(kml_doc,
       
       if (!is.null(style_id)) {
         # Create styleUrl element
-        style_url_node <- read_xml(sprintf("<styleUrl>#%s</styleUrl>", style_id))
+        style_url_node <- xml2::read_xml(sprintf("<styleUrl>#%s</styleUrl>", style_id))
         
         # Add to placemark (before ExtendedData if it exists)
-        extended_data <- xml_find_first(placemark, ".//d1:ExtendedData", xml_ns(kml_doc))
+        extended_data <- xml2::xml_find_first(placemark, ".//d1:ExtendedData", xml2::xml_ns(kml_doc))
         if (length(extended_data) == 0) {
-          extended_data <- xml_find_first(placemark, ".//ExtendedData")
+          extended_data <- xml2::xml_find_first(placemark, ".//ExtendedData")
         }
         
         if (length(extended_data) > 0) {
-          xml_add_sibling(extended_data, style_url_node, .where = "before")
+          xml2::xml_add_sibling(extended_data, style_url_node, .where = "before")
         } else {
-          xml_add_child(placemark, style_url_node, .where = 0)
+          xml2::xml_add_child(placemark, style_url_node, .where = 0)
         }
       }
     }
@@ -433,8 +433,8 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
   if (is.null(label_field)) {
     # Find first character field
     char_fields <- sf_object %>%
-      st_drop_geometry() %>%
-      select(where(is.character)) %>%
+      sf::st_drop_geometry() %>%
+      dplyr::select(dplyr::where(is.character)) %>%
       names()
     
     if (length(char_fields) > 0) {
@@ -450,15 +450,15 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
   # Get label values
   if (!is.null(label_field)) {
     label_values <- sf_object %>%
-      st_drop_geometry() %>%
-      pull(!!sym(label_field))
+      sf::st_drop_geometry() %>%
+      dplyr::pull(!!rlang::sym(label_field))
   }
   
   # Find all Placemark nodes
-  placemarks <- xml_find_all(kml_doc, "//d1:Placemark", xml_ns(kml_doc))
+  placemarks <- xml2::xml_find_all(kml_doc, "//d1:Placemark", xml2::xml_ns(kml_doc))
   
   if (length(placemarks) == 0) {
-    placemarks <- xml_find_all(kml_doc, "//Placemark")
+    placemarks <- xml2::xml_find_all(kml_doc, "//Placemark")
   }
   
   # Update name element in each placemark
@@ -466,9 +466,9 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
     placemark <- placemarks[[i]]
     
     # Find or create name element
-    name_node <- xml_find_first(placemark, ".//d1:name", xml_ns(kml_doc))
+    name_node <- xml2::xml_find_first(placemark, ".//d1:name", xml2::xml_ns(kml_doc))
     if (length(name_node) == 0) {
-      name_node <- xml_find_first(placemark, ".//name")
+      name_node <- xml2::xml_find_first(placemark, ".//name")
     }
     
     # Set label value (ensure UTF-8 encoding)
@@ -476,11 +476,11 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
     label_text <- iconv(label_text, from = "UTF-8", to = "UTF-8")
     
     if (length(name_node) > 0) {
-      xml_set_text(name_node, label_text)
+      xml2::xml_set_text(name_node, label_text)
     } else {
       # Create new name node
-      name_xml <- read_xml(sprintf("<name>%s</name>", label_text))
-      xml_add_child(placemark, name_xml, .where = 0)
+      name_xml <- xml2::read_xml(sprintf("<name>%s</name>", label_text))
+      xml2::xml_add_child(placemark, name_xml, .where = 0)
     }
   }
   
@@ -588,12 +588,6 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
 #' \code{\link[viridisLite]{viridis}} for color palettes
 #'
 #' @export
-#' @importFrom sf st_transform st_crs st_write st_drop_geometry st_is_valid st_make_valid st_bbox st_geometry_type
-#' @importFrom xml2 read_xml write_xml xml_find_all xml_find_first xml_ns xml_add_child xml_remove xml_attr xml_set_attr xml_text xml_set_text xml_add_sibling
-#' @importFrom dplyr pull select where
-#' @importFrom rlang sym
-#' @importFrom viridisLite viridis
-#' @importFrom utils zip
 EXPORT_SF_TO_THEMED_KML <- function(sf_object,
                                     output_filename,
                                     output_location = getwd(),
@@ -618,9 +612,9 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
     stop("sf_object has no features")
   }
   
-  if (!st_is_valid(sf_object) %>% all(na.rm = TRUE)) {
+  if (!sf::st_is_valid(sf_object) %>% all(na.rm = TRUE)) {
     message("Warning: Some geometries are invalid. Attempting to fix with st_make_valid()...")
-    sf_object <- st_make_valid(sf_object)
+    sf_object <- sf::st_make_valid(sf_object)
   }
   
   # Check if color_field exists
@@ -662,11 +656,11 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
   message(paste0("Exporting ", nrow(sf_object), " features to ", toupper(format), "..."))
   
   # Transform to WGS84 (EPSG:4326) - required for KML------
-  original_crs <- st_crs(sf_object)
+  original_crs <- sf::st_crs(sf_object)
   
   if (is.na(original_crs$epsg) || original_crs$epsg != 4326) {
     message("Transforming to WGS84 (EPSG:4326) for KML export...")
-    sf_object <- st_transform(sf_object, 4326)
+    sf_object <- sf::st_transform(sf_object, 4326)
   }
   
   # Preserve UTF-8 encoding in character fields------
@@ -708,7 +702,7 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
   # Note: KML driver has limited layer_options support
   # See: https://gdal.org/drivers/vector/kml.html
   # delete_dsn=TRUE may produce harmless warning on Windows about file access
-  st_write(
+  sf::st_write(
     sf_object, 
     temp_kml, 
     driver = "KML",
@@ -719,7 +713,7 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
   message("Base KML exported, processing styles...")
   
   # Read KML as XML------
-  kml_doc <- read_xml(temp_kml)
+  kml_doc <- xml2::read_xml(temp_kml)
   
   # Clean up KML structure------
   # Remove empty inline Style elements (they override styleUrl)
@@ -764,7 +758,7 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
   
   # Write final KML------
   if (format == "kml") {
-    write_xml(kml_doc, output_path, encoding = "UTF-8")
+    xml2::write_xml(kml_doc, output_path, encoding = "UTF-8")
     message(paste0("KML saved to: ", output_path))
     
   } else {
@@ -774,13 +768,13 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
     
     # KMZ standard requires file to be named "doc.kml" inside archive
     doc_kml_path <- file.path(temp_dir, "doc.kml")
-    write_xml(kml_doc, doc_kml_path, encoding = "UTF-8")
+    xml2::write_xml(kml_doc, doc_kml_path, encoding = "UTF-8")
     
     # Create ZIP archive
     current_wd <- getwd()
     setwd(temp_dir)
     
-    zip(
+    utils::zip(
       zipfile = output_path,
       files = "doc.kml",
       flags = "-q -j"  # -q for quiet, -j to junk directory paths

@@ -3,7 +3,8 @@
 ^\.git$
 ^\.gitignore$
 ^README\.md$
-^LICENSE$
+^PUSH_TO_GITHUB\.md$
+^INSTALLATION\.md$
 ^kml_export_functions\.r$
 ^georeferenced_map_functions\.r$
 ^misc_functions\.r$

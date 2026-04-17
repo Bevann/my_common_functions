@@ -22,7 +22,15 @@ Install directly from GitHub using devtools:
 # Install devtools if you don't have it
 install.packages("devtools")
 
-# Install from GitHub (repo name uses underscores)
+# Set working directory
+setwd("w:/wlap/kam/Workarea/BErnst/R_Scripts/my_common_functions")
+
+# Regenerate documentation
+roxygen2::roxygenise()
+
+# Check for build issues
+devtools::document()
+devtools::check()# Install from GitHub (repo name uses underscores)
 devtools::install_github("Bevann/my_common_functions")
 
 # Load the package (package name uses periods)

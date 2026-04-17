@@ -32,3 +32,32 @@
 #' @importFrom magrittr %>%
 #' @export %>%
 "_PACKAGE"
+
+#' Pipe operator
+#'
+#' See \code{magrittr::\link[magrittr:pipe]{\%>\%}} for details.
+#'
+#' @name %>%
+#' @rdname pipe
+#' @keywords internal
+#' @export
+#' @importFrom magrittr %>%
+#' @usage lhs \%>\% rhs
+#' @param lhs A value or the magrittr placeholder.
+#' @param rhs A function call using the magrittr semantics.
+#' @return The result of calling \code{rhs(lhs)}.
+NULL
+
+# Declare global variables used in NSE contexts to avoid R CMD check NOTEs
+utils::globalVariables(c(
+  ".",
+  ".dates_clean",
+  ".bio_year_start_date",
+  "n", "d", "varN", "sdN", "N", "CI",
+  "95% Lower", "95% Upper",
+  "geometry", "geometry_lagged",
+  "LOCAL_DATE_TIME_LAG",
+  "Travel_Length_Km", "Travel_Time_H", "Travel_Speed_KmH",
+  "RECNO",
+  "origins"
+))

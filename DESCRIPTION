@@ -9,7 +9,7 @@ Description: Utility functions for spatial data workflows including themed KML/K
     export, georeferenced PDF maps, wildlife population analysis, and spatial 
     data manipulation. Includes Lincoln-Petersen population estimates, biological 
     year calculations, movement line generation, and geometry validation tools.
-License: Apache License 2.0 | file LICENSE
+License: Apache License (>= 2.0)
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 4.0.0)
@@ -26,7 +26,10 @@ Imports:
     lubridate,
     forcats,
     purrr,
-    magrittr
+    magrittr,
+    grDevices,
+    stats,
+    utils
 Suggests:
     pals,
     RColorBrewer,

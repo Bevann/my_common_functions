@@ -20,46 +20,46 @@
 #'   \item{bio_day}{The day number within the biological year (1 = first day of bio year)}
 #'
 #' @examples
+#' \dontrun{
 #' # For a caribou study where the biological year starts on May 15 (calving season)
 #' caribou_data %>%
 #'   ADD_BIO_YEAR(date_col = observation_date, bio_start_date = "2023-05-15")
+#' }
 #'
-#' @importFrom lubridate month mday make_date year
-#' @importFrom dplyr mutate select if_else
 #' @export
 ADD_BIO_YEAR <- function(data, date_col, bio_start_date) {
   # --- Standardize bio_start_date ---
   bio_start_date_clean <- as.Date(bio_start_date)
-  calving_month <- month(bio_start_date_clean)
-  calving_day_of_month <- mday(bio_start_date_clean)
+  calving_month <- lubridate::month(bio_start_date_clean)
+  calving_day_of_month <- lubridate::mday(bio_start_date_clean)
   
   # --- Main Logic using mutate() ---
   data %>%
-    mutate(
+    dplyr::mutate(
       # Use {{date_col}} to access the user-specified column.
       # Create a temporary, clean date column to work with.
       .dates_clean = as.Date({{ date_col }}),
       
       # Determine the start date of the biological year for each row.
-      .bio_year_start_date = make_date(
-        year = if_else(
+      .bio_year_start_date = lubridate::make_date(
+        year = dplyr::if_else(
           # If the observation is before this year's calving day...
-          .dates_clean < make_date(year(.dates_clean), calving_month, calving_day_of_month),
+          .dates_clean < lubridate::make_date(lubridate::year(.dates_clean), calving_month, calving_day_of_month),
           # ...then the bio year started last calendar year.
-          year(.dates_clean) - 1,
+          lubridate::year(.dates_clean) - 1,
           # Otherwise, it started this calendar year.
-          year(.dates_clean)
+          lubridate::year(.dates_clean)
         ),
         month = calving_month,
         day = calving_day_of_month
       ),
       
       # Create the final columns.
-      bio_year = year(.bio_year_start_date),
+      bio_year = lubridate::year(.bio_year_start_date),
       bio_day = as.numeric(.dates_clean - .bio_year_start_date) + 1
     ) %>%
     # Remove the temporary helper columns.
-    select(-.dates_clean, -.bio_year_start_date)
+    dplyr::select(-.dates_clean, -.bio_year_start_date)
 }
 
 
@@ -78,9 +78,11 @@ ADD_BIO_YEAR <- function(data, date_col, bio_start_date) {
 #'   Lambda is calculated as: (Final_Pop / Initial_Pop)^(1 / Time_Span)
 #'
 #' @examples
+#' \dontrun{
 #' # Population declined from 150 to 120 over 5 years
 #' CALC_LAMBDA(Initial_Pop = 150, Final_Pop = 120, Time_Span = 5)
 #' # Returns lambda < 1, indicating decline
+#' }
 #'
 #' @export
 CALC_LAMBDA <- function(Initial_Pop, Final_Pop, Time_Span) {
@@ -119,6 +121,7 @@ CALC_LAMBDA <- function(Initial_Pop, Final_Pop, Time_Span) {
 #'   \item{Variance}{Variance of the estimate}
 #'
 #' @examples
+#' \dontrun{
 #' survey_data %>%
 #'   LINC_PET_PIPE(
 #'     Herd = herd_name,
@@ -126,12 +129,12 @@ CALC_LAMBDA <- function(Initial_Pop, Final_Pop, Time_Span) {
 #'     Total_collars = collars_deployed,
 #'     Observed_collars = collars_seen
 #'   )
+#' }
 #'
-#' @importFrom dplyr mutate select
 #' @export
 LINC_PET_PIPE <- function(Data, Herd=Herd, Observed_caribou=Observed_caribou, Total_collars=Total_collars, Observed_collars=Observed_collars, ...) {
   Data %>%
-    mutate(
+    dplyr::mutate(
       N = ((({{ Total_collars }} + 1) * ({{ Observed_caribou }} + 1)) / ({{ Observed_collars }} + 1)) - 1,
       n = (({{ Total_collars }} + 1) * ({{ Observed_caribou }} + 1) * ({{ Total_collars }} - {{ Observed_collars }}) * ({{ Observed_caribou }} - {{ Observed_collars }})),
       d = (({{ Observed_collars }} + 1)^2) * ({{ Observed_collars }} + 2),
@@ -141,7 +144,7 @@ LINC_PET_PIPE <- function(Data, Herd=Herd, Observed_caribou=Observed_caribou, To
       `95% Upper` = N + CI,
       `95% Lower` = pmax(N - CI, {{ Observed_caribou }})
     ) %>%
-    select(`Herd Name` = {{ Herd }}, `Total Caribou Observed` = {{ Observed_caribou }}, `Total Collars in Herd` = {{ Total_collars }}, `Observed Collars` = {{ Observed_collars }}, `Estimated Population Size` = N, `95% Upper`, `95% Lower`, Variance=varN) %>%
+    dplyr::select(`Herd Name` = {{ Herd }}, `Total Caribou Observed` = {{ Observed_caribou }}, `Total Collars in Herd` = {{ Total_collars }}, `Observed Collars` = {{ Observed_collars }}, `Estimated Population Size` = N, `95% Upper`, `95% Lower`, Variance=varN) %>%
     return(.)
 }
 
@@ -171,8 +174,10 @@ LINC_PET_PIPE <- function(Data, Herd=Herd, Observed_caribou=Observed_caribou, To
 #'   \item{CI_95_Lower}{Lower 95% confidence limit}
 #'
 #' @examples
+#' \dontrun{
 #' # Survey observed 45 caribou, 8 collars deployed, 3 collars seen
 #' CALC_LINC_PET(Observed_caribou = 45, Total_collars = 8, Observed_collars = 3)
+#' }
 #'
 #' @export
 CALC_LINC_PET <-  function(Observed_caribou, Total_collars, Observed_collars,...){
@@ -213,18 +218,18 @@ CALC_LINC_PET <-  function(Observed_caribou, Total_collars, Observed_collars,...
 #'   - All non-intersecting areas from layer_a (with only layer_a attributes)
 #'
 #' @examples
+#' \dontrun{
 #' # Split wildlife range by land ownership to get area by owner
 #' caribou_range %>%
 #'   ARC.IDENT(land_ownership)
+#' }
 #'
-#' @importFrom sf st_intersection st_difference st_union st_as_sf
-#' @importFrom dplyr bind_rows
 #' @export
 ARC.IDENT <- function(layer_a, layer_b) {
-  int_a_b <- st_intersection(layer_a, layer_b)
-  rest_of_a <- st_difference(layer_a, st_union(layer_b))
-  output <- bind_rows(int_a_b, rest_of_a)
-  return(st_as_sf(output))
+  int_a_b <- sf::st_intersection(layer_a, layer_b)
+  rest_of_a <- sf::st_difference(layer_a, sf::st_union(layer_b))
+  output <- dplyr::bind_rows(int_a_b, rest_of_a)
+  return(sf::st_as_sf(output))
 }
 
 
@@ -239,15 +244,15 @@ ARC.IDENT <- function(layer_a, layer_b) {
 #'   POLYGON, MULTIPOLYGON, etc.)
 #'
 #' @examples
+#' \dontrun{
 #' # Check what geometry types are in your spatial layer
 #' wildlife_habitat %>% CHECK_GEOMETRY()
 #' # Output might show: POLYGON (150), MULTIPOLYGON (3)
+#' }
 #'
-#' @importFrom sf st_geometry_type
-#' @importFrom forcats fct_count
 #' @export
 CHECK_GEOMETRY <- function(x) {
-  st_geometry_type(x) %>% fct_count()
+  sf::st_geometry_type(x) %>% forcats::fct_count()
 }
 
 #' Check Geometry Validity in an SF Object
@@ -261,18 +266,18 @@ CHECK_GEOMETRY <- function(x) {
 #' @return A tibble showing counts of TRUE (valid) and FALSE (invalid) geometries
 #'
 #' @examples
+#' \dontrun{
 #' # Check if geometries are valid before performing spatial operations
 #' forest_stands %>% CHECK_VALID()
 #' # Output: TRUE (1450), FALSE (12) indicates 12 invalid features
+#' }
 #'
-#' @importFrom sf st_is_valid
-#' @importFrom forcats fct_count
 #' @export
 CHECK_VALID <-
   function(x) {
-    st_is_valid(x) %>%
+    sf::st_is_valid(x) %>%
       as.factor() %>%
-      fct_count()
+      forcats::fct_count()
   }
 
 #' Calculate Area in Hectares
@@ -288,18 +293,18 @@ CHECK_VALID <-
 #'   the area of each feature in hectares
 #'
 #' @examples
+#' \dontrun{
 #' # Add hectare areas to forest cutblocks
 #' cutblocks_sf %>%
 #'   st_transform(3005) %>%  # BC Albers for accurate area
 #'   CALC_HA()
+#' }
 #'
-#' @importFrom sf st_area
-#' @importFrom dplyr mutate
 #' @export
 CALC_HA <- function(.data) {
-  .data %>% mutate(
+  .data %>% dplyr::mutate(
     Hectares =
-      as.numeric(st_area(.)) / 10000
+      as.numeric(sf::st_area(.)) / 10000
   )
 }
 
@@ -325,19 +330,20 @@ CALC_HA <- function(.data) {
 #' @return An sf object containing only valid POLYGON geometries
 #'
 #' @examples
+#' \dontrun{
 #' # Repair geometries with 1-meter precision
 #' forest_layer %>%
 #'   MAKE_VALID_POLYS(precision = 1000)
+#' }
 #'
-#' @importFrom sf st_set_precision st_make_valid st_collection_extract st_cast
 #' @export
 MAKE_VALID_POLYS <- function(.data, precision) {.data %>%
-    st_set_precision(precision) %>%
+    sf::st_set_precision(precision) %>%
     
-    st_make_valid() %>%
-    st_collection_extract("POLYGON") %>%
-      st_cast("MULTIPOLYGON") %>%
-      st_cast("POLYGON") }
+    sf::st_make_valid() %>%
+    sf::st_collection_extract("POLYGON") %>%
+      sf::st_cast("MULTIPOLYGON") %>%
+      sf::st_cast("POLYGON") }
 
 
 
@@ -371,40 +377,39 @@ MAKE_VALID_POLYS <- function(.data, precision) {.data %>%
 #'   \item{RECNO}{Sequential record number within each group}
 #'
 #' @examples
+#' \dontrun{
 #' # Create movement lines from caribou GPS collar data
 #' collar_points %>%
 #'   MAKE_LINES(Group_Var = animal_id, Date_Time_Var = fix_time)
+#' }
 #'
-#' @importFrom dplyr group_by arrange mutate row_number lag slice select ungroup
-#' @importFrom sf st_sfc st_union st_cast st_set_crs st_crs st_length
-#' @importFrom purrr map2
 #' @export
 MAKE_LINES <- function (.data, Group_Var, Date_Time_Var){
   .data %>%
     
-    group_by({{Group_Var}}) %>%
-    arrange({{Date_Time_Var}}) %>%
-    mutate(RECNO=row_number() ,
-      geometry_lagged = lag(geometry, default = NA),
-      LOCAL_DATE_TIME_LAG=lag({{Date_Time_Var}}, default=NA)
+    dplyr::group_by({{Group_Var}}) %>%
+    dplyr::arrange({{Date_Time_Var}}) %>%
+    dplyr::mutate(RECNO=dplyr::row_number() ,
+      geometry_lagged = dplyr::lag(geometry, default = NA),
+      LOCAL_DATE_TIME_LAG=dplyr::lag({{Date_Time_Var}}, default=NA)
     ) %>%
     # drop the NA row created by lagging
-    slice(-1) %>% 
-    mutate(
-      geometry = st_sfc(purrr::map2(
+    dplyr::slice(-1) %>% 
+    dplyr::mutate(
+      geometry = sf::st_sfc(purrr::map2(
         .x = geometry, 
         .y = geometry_lagged, 
-        .f = ~{st_union(c(.x, .y)) %>% st_cast("LINESTRING")}
+        .f = ~{sf::st_union(c(.x, .y)) %>% sf::st_cast("LINESTRING")}
       ))) %>%
-    select(-geometry_lagged) %>%
-    st_set_crs(st_crs(.data)) %>%
-    ungroup() %>%
+    dplyr::select(-geometry_lagged) %>%
+    sf::st_set_crs(sf::st_crs(.data)) %>%
+    dplyr::ungroup() %>%
     
-    mutate(Travel_Length_Km=st_length({.})/1000, 
+    dplyr::mutate(Travel_Length_Km=sf::st_length({.})/1000, 
            Travel_Time_H=as.numeric(difftime({{Date_Time_Var}},LOCAL_DATE_TIME_LAG, units = "hours")), 
            Travel_Speed_KmH=((as.numeric(Travel_Length_Km)))/(as.numeric(Travel_Time_H))) %>%
     
-    select({{Group_Var}}, {{Date_Time_Var}}, Travel_Length_Km, Travel_Time_H, Travel_Speed_KmH,RECNO)
+    dplyr::select({{Group_Var}}, {{Date_Time_Var}}, Travel_Length_Km, Travel_Time_H, Travel_Speed_KmH,RECNO)
   
 }
 
@@ -437,6 +442,7 @@ MAKE_LINES <- function (.data, Group_Var, Date_Time_Var){
 #'   output column will be named "habitat_type_LIST"
 #'
 #' @examples
+#' \dontrun{
 #' # Flatten overlapping habitat polygons, listing all habitat types
 #' habitat_layers %>%
 #'   FLATTEN_POLYS(
@@ -444,21 +450,19 @@ MAKE_LINES <- function (.data, Group_Var, Date_Time_Var){
 #'     MAX_COL = "quality_score",
 #'     FIRST_COL = "priority"
 #'   )
+#' }
 #'
-#' @importFrom sf st_intersection st_collection_extract
-#' @importFrom dplyr mutate first
-#' @importFrom purrr map_chr
 #' @export
 FLATTEN_POLYS <- function (.data, LIST_COL, MAX_COL, FIRST_COL) {
   LIST_NAME <-paste0(LIST_COL,"_LIST") 
   MAX_NAME <-paste0(MAX_COL,"_MAX") 
   FIRST_NAME <-paste0(FIRST_COL,"_FIRST") 
-  st_intersection(.data) %>%
-    st_collection_extract("POLYGON") %>%
+  sf::st_intersection(.data) %>%
+    sf::st_collection_extract("POLYGON") %>%
     
-    mutate(LIST_NAME= map_chr(origins,  ~ paste0(.data$LIST_COL[.], collapse = "; ")),
-           FIRST_NAME= map_chr(origins,  ~ first(.data$FIRST_COL[.])),
-           MAX_NAME= map_chr(origins,  ~ max(.data$MAX_COL[.])))
+    dplyr::mutate(LIST_NAME= purrr::map_chr(origins,  ~ paste0(.data$LIST_COL[.], collapse = "; ")),
+           FIRST_NAME= purrr::map_chr(origins,  ~ dplyr::first(.data$FIRST_COL[.])),
+           MAX_NAME= purrr::map_chr(origins,  ~ max(.data$MAX_COL[.])))
   
 }
 

@@ -75,9 +75,6 @@
 #' \code{\link[basemaps]{basemap_ggplot}} for basemap details
 #'
 #' @export
-#' @importFrom sf st_transform st_crs st_bbox
-#' @importFrom basemaps basemap_ggplot
-#' @importFrom ggplot2 coord_sf theme_void
 CREATE_BASEMAP_PLOT <- function(largest_data, 
                                 ext_expansion = 0.1,
                                 map_res = 2,
@@ -85,8 +82,8 @@ CREATE_BASEMAP_PLOT <- function(largest_data,
                                 map_type = "world_topo_map") {
   
   # Transform to EPSG:3857 if not already in that projection
-  if (st_crs(largest_data)$epsg != 3857) {
-    largest_data <- st_transform(largest_data, crs = 3857)
+  if (sf::st_crs(largest_data)$epsg != 3857) {
+    largest_data <- sf::st_transform(largest_data, crs = 3857)
     message("Transformed input data to EPSG:3857")
   }
   
@@ -99,7 +96,7 @@ CREATE_BASEMAP_PLOT <- function(largest_data,
   }
   
   # Get extent of data
-  ORIGINAL_EXTENT <- st_bbox(largest_data)
+  ORIGINAL_EXTENT <- sf::st_bbox(largest_data)
   
   EXT_WIDTH <- as.numeric(ORIGINAL_EXTENT["xmax"] - ORIGINAL_EXTENT["xmin"])
   EXT_HEIGHT <- as.numeric(ORIGINAL_EXTENT["ymax"] - ORIGINAL_EXTENT["ymin"])
@@ -108,24 +105,24 @@ CREATE_BASEMAP_PLOT <- function(largest_data,
   X_DISPLAY_BUFFER <- EXT_WIDTH * ext_expansion
   Y_DISPLAY_BUFFER <- EXT_HEIGHT * ext_expansion
   
-  DISPLAY_EXTENT <- st_bbox(c(
+  DISPLAY_EXTENT <- sf::st_bbox(c(
     xmin = as.numeric(ORIGINAL_EXTENT["xmin"]) - X_DISPLAY_BUFFER,
     ymin = as.numeric(ORIGINAL_EXTENT["ymin"]) - Y_DISPLAY_BUFFER,
     xmax = as.numeric(ORIGINAL_EXTENT["xmax"]) + X_DISPLAY_BUFFER,
     ymax = as.numeric(ORIGINAL_EXTENT["ymax"]) + Y_DISPLAY_BUFFER
-  ), crs = st_crs(largest_data))
+  ), crs = sf::st_crs(largest_data))
   
   # Basemap fetch extent (larger expansion to ensure tile coverage)
   X_BASEMAP_BUFFER <- EXT_WIDTH * basemap_expansion
   Y_BASEMAP_BUFFER <- EXT_HEIGHT * basemap_expansion
   
   # Create expanded bbox for basemap tiles
-  BASEMAP_BBOX <- st_bbox(c(
+  BASEMAP_BBOX <- sf::st_bbox(c(
     xmin = as.numeric(ORIGINAL_EXTENT["xmin"]) - X_BASEMAP_BUFFER,
     ymin = as.numeric(ORIGINAL_EXTENT["ymin"]) - Y_BASEMAP_BUFFER,
     xmax = as.numeric(ORIGINAL_EXTENT["xmax"]) + X_BASEMAP_BUFFER,
     ymax = as.numeric(ORIGINAL_EXTENT["ymax"]) + Y_BASEMAP_BUFFER
-  ), crs = st_crs(largest_data))
+  ), crs = sf::st_crs(largest_data))
   
   # Debug output
   message(paste0("Original extent width: ", round(EXT_WIDTH, 2)))
@@ -135,7 +132,7 @@ CREATE_BASEMAP_PLOT <- function(largest_data,
   message(paste0("Basemap buffer: ", round(X_BASEMAP_BUFFER, 2)))
   
   # Create the basemap ggplot
-  MAP_PLOT <- basemap_ggplot(
+  MAP_PLOT <- basemaps::basemap_ggplot(
     ext = BASEMAP_BBOX,
     map_service = map_service,
     map_type = map_type,
@@ -143,14 +140,14 @@ CREATE_BASEMAP_PLOT <- function(largest_data,
     dpi = 600,
     interpolate = TRUE
   ) + 
-    coord_sf(
+    ggplot2::coord_sf(
       xlim = c(DISPLAY_EXTENT["xmin"], DISPLAY_EXTENT["xmax"]),
       ylim = c(DISPLAY_EXTENT["ymin"], DISPLAY_EXTENT["ymax"]), 
       expand = FALSE,
       crs = 3857,  # Explicitly set CRS to match basemap
       default_crs = NULL  # Prevents auto-expansion when adding new layers
     ) +
-    theme_void()
+    ggplot2::theme_void()
   
   message(paste0("Map created with map_res: ", map_res))
   
@@ -224,9 +221,6 @@ CREATE_BASEMAP_PLOT <- function(largest_data,
 #' \code{\link[terra]{writeRaster}} for raster export details
 #'
 #' @export
-#' @importFrom ggplot2 ggsave ggplot_build
-#' @importFrom terra rast flip ext crs project writeRaster clamp
-#' @importFrom gdalUtilities gdal_translate
 EXPORT_GEOREFERENCED_PDF <- function(map_plot, 
                                      output_filename,
                                      output_location = getwd()) {
@@ -246,7 +240,7 @@ EXPORT_GEOREFERENCED_PDF <- function(map_plot,
                                paste0(tools::file_path_sans_ext(output_filename), "_geo.tif"))
   
   # Step 1: Extract plot panel dimensions
-  built <- ggplot_build(map_plot)
+  built <- ggplot2::ggplot_build(map_plot)
   x_range <- built$layout$panel_params[[1]]$x_range
   y_range <- built$layout$panel_params[[1]]$y_range
   
@@ -260,28 +254,28 @@ EXPORT_GEOREFERENCED_PDF <- function(map_plot,
   width <- height * aspect_ratio
   
   message("Saving plot as TIFF...")
-  ggsave(filename = tiff_temp, plot = map_plot, dpi = 600, 
+  ggplot2::ggsave(filename = tiff_temp, plot = map_plot, dpi = 600, 
          width = width, height = height, units = "in", 
          device = "tiff", compression = "lzw")
   
   # Step 2: Read TIFF as raster and flip
   message("Reading TIFF as raster...")
-  map_raster <- rast(tiff_temp) %>% flip()
+  map_raster <- terra::rast(tiff_temp) %>% terra::flip()
   
   # Step 3: Get bounding box from ggplot build
   raster_extent <- built$layout$panel_params[[1]][c("x_range", "y_range")]
   
   # Step 4: Set extent and projection (Web Mercator EPSG:3857)
-  ext(map_raster) <- c(raster_extent$x_range, raster_extent$y_range)
-  crs(map_raster) <- "EPSG:3857"
+  terra::ext(map_raster) <- c(raster_extent$x_range, raster_extent$y_range)
+  terra::crs(map_raster) <- "EPSG:3857"
   
   # Store original dimensions before reprojection
   original_ncol <- ncol(map_raster)
   original_nrow <- nrow(map_raster)
   
   # Calculate target extent in 4326
-  extent_3857 <- ext(map_raster)
-  extent_4326 <- project(extent_3857, from="EPSG:3857", to="EPSG:4326")
+  extent_3857 <- terra::ext(map_raster)
+  extent_4326 <- terra::project(extent_3857, from="EPSG:3857", to="EPSG:4326")
   
   # Calculate resolution to maintain original pixel dimensions
   target_res_x <- (extent_4326[2] - extent_4326[1]) / original_ncol
@@ -289,15 +283,15 @@ EXPORT_GEOREFERENCED_PDF <- function(map_plot,
   
   # Reproject with explicit resolution to preserve dimensions
   message("Reprojecting to EPSG:4326 with lanczos interpolation...")
-  map_raster <- project(map_raster, "EPSG:4326", method="lanczos", 
+  map_raster <- terra::project(map_raster, "EPSG:4326", method="lanczos", 
                        res=c(target_res_x, target_res_y), threads=TRUE)
   
   # Clamp values to valid RGB range (0-255) after reprojection
-  map_raster <- clamp(map_raster, lower=0, upper=255, values=TRUE)
+  map_raster <- terra::clamp(map_raster, lower=0, upper=255, values=TRUE)
   
   # Step 5: Write as GeoTIFF with lossless compression
   message("Writing GeoTIFF...")
-  writeRaster(map_raster, geotiff_filename, overwrite = TRUE, 
+  terra::writeRaster(map_raster, geotiff_filename, overwrite = TRUE, 
               gdal = c("PHOTOMETRIC=RGB", "COMPRESS=LZW", "TILED=YES"), 
               datatype = "INT1U")
   
@@ -309,7 +303,7 @@ EXPORT_GEOREFERENCED_PDF <- function(map_plot,
   pixel_width <- raster_dims[2]
   pixel_height <- raster_dims[1]
   
-  gdal_translate(
+  gdalUtilities::gdal_translate(
     src_dataset = geotiff_filename,
     dst_dataset = pdf_geo_filename,
     of = "PDF",
