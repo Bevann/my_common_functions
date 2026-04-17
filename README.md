@@ -1,6 +1,6 @@
 ﻿# R Spatial Utility Functions
 
-A collection of R utility functions for spatial data processing, visualization, and export. Designed for BC Government workflows involving spatial data and field data visualization.
+A collection of R utility functions for spatial data processing, visualization, and export. Includes tools for spatial data manipulation, field data visualization, and wildlife population analysis.
 
 ## Overview
 
@@ -22,11 +22,13 @@ Install directly from GitHub using devtools:
 # Install devtools if you don't have it
 install.packages("devtools")
 
-# Install my_common_functions package from GitHub
+# Install from GitHub (repo name uses underscores)
 devtools::install_github("Bevann/my_common_functions")
 
-# Load the package
-library(my_common_functions)
+# Load the package (package name uses periods)
+library(my.common.functions)
+
+# Note: Names differ due to GitHub (allows _) vs R (allows .) naming rules
 
 # Functions are now available directly
 EXPORT_SF_TO_THEMED_KML(my_data, ...)

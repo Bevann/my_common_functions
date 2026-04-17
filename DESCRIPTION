@@ -1,15 +1,13 @@
-Package: my_common_functions
+Package: my.common.functions
 Type: Package
-Title: Spatial Data Utilities for BC Government Workflows
+Title: Spatial Data Utilities and Wildlife Analysis Tools
 Version: 0.1.0
 Authors@R: person("Bevan", "Ernst", 
-                  email = "Bevan.Ernst@gov.bc.ca",
                   role = c("aut", "cre"))
 Description: Utility functions for spatial data workflows including themed KML/KMZ 
     export, georeferenced PDF maps, wildlife population analysis, and spatial 
     data manipulation. Includes Lincoln-Petersen population estimates, biological 
-    year calculations, movement line generation, and geometry validation tools. 
-    Designed for BC Government spatial and wildlife data workflows.
+    year calculations, movement line generation, and geometry validation tools.
 License: Apache License 2.0 | file LICENSE
 Encoding: UTF-8
 LazyData: true

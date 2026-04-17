@@ -16,12 +16,16 @@ Anyone can now install your package directly from GitHub:
 # Install devtools if you don't have it
 install.packages("devtools")
 
-# Install your package from GitHub
+# Install from GitHub (repo name uses underscores)
 devtools::install_github("Bevann/my_common_functions")
 
-# Load the package
-library(my_common_functions)
+# Load the package (package name uses periods)
+library(my.common.functions)
 ```
+
+**Note:** The GitHub repository name and R package name differ due to naming restrictions:
+- GitHub repo: `my_common_functions` (underscores)
+- R package: `my.common.functions` (periods)
 
 ### Method 2: Install from Local Directory
 
@@ -38,7 +42,7 @@ devtools::install_local("W:/wlap/kam/Workarea/BErnst/R_Scripts/my_common_functio
 Once installed, you can use the functions directly:
 
 ```r
-library(my_common_functions)
+library(my.common.functions)
 
 # Export to KML
 EXPORT_SF_TO_THEMED_KML(
@@ -59,7 +63,7 @@ basemap <- CREATE_BASEMAP_PLOT(
 
 ```r
 # Package help
-?my_common_functions
+?my.common.functions
 
 # Function help
 ?EXPORT_SF_TO_THEMED_KML
@@ -67,7 +71,7 @@ basemap <- CREATE_BASEMAP_PLOT(
 ?EXPORT_GEOREFERENCED_PDF
 
 # See all package functions
-help(package = "my_common_functions")
+help(package = "my.common.functions")
 ```
 
 ## Development Workflow
@@ -134,7 +138,7 @@ my_common_functions/
 
 ### Installation Method
 - Now installable with `devtools::install_github("Bevann/my_common_functions")`
-- Functions available after `library(my_common_functions)`
+- Functions available after `library(my.common.functions)`
 - Help documentation accessible with `?function_name`
 
 ## Sharing with Others

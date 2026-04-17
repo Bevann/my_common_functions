@@ -1,4 +1,4 @@
-#' my_common_functions: Spatial Data Utilities for BC Government Workflows
+#' my.common.functions: Spatial Data Utilities and Wildlife Analysis Tools
 #'
 #' A collection of utility functions for exporting spatial data to themed KML/KMZ 
 #' files and creating georeferenced PDF maps with basemaps. Supports point, line, 
