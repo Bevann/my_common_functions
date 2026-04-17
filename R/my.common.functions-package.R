@@ -22,10 +22,13 @@
 #' ESRI, OpenStreetMap, and other providers.
 #'
 #' @docType package
-#' @name my_common_functions-package
-#' @aliases my_common_functions
+#' @name my.common.functions-package
+#' @aliases my.common.functions
 #'
-#' @author Bevan Ernst \email{Bevan.Ernst@@gov.bc.ca}
+#' @author Bevan Ernst
 #'
 #' @keywords spatial GIS KML maps
+#'
+#' @importFrom magrittr %>%
+#' @export %>%
 "_PACKAGE"

@@ -591,7 +591,7 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
 #' @importFrom sf st_transform st_crs st_write st_drop_geometry st_is_valid st_make_valid st_bbox st_geometry_type
 #' @importFrom xml2 read_xml write_xml xml_find_all xml_find_first xml_ns xml_add_child xml_remove xml_attr xml_set_attr xml_text xml_set_text xml_add_sibling
 #' @importFrom dplyr pull select where
-#' @importFrom tidyr sym
+#' @importFrom rlang sym
 #' @importFrom viridisLite viridis
 #' @importFrom utils zip
 EXPORT_SF_TO_THEMED_KML <- function(sf_object,

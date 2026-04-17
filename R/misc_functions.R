@@ -24,6 +24,8 @@
 #' caribou_data %>%
 #'   ADD_BIO_YEAR(date_col = observation_date, bio_start_date = "2023-05-15")
 #'
+#' @importFrom lubridate month mday make_date year
+#' @importFrom dplyr mutate select if_else
 #' @export
 ADD_BIO_YEAR <- function(data, date_col, bio_start_date) {
   # --- Standardize bio_start_date ---
@@ -125,6 +127,7 @@ CALC_LAMBDA <- function(Initial_Pop, Final_Pop, Time_Span) {
 #'     Observed_collars = collars_seen
 #'   )
 #'
+#' @importFrom dplyr mutate select
 #' @export
 LINC_PET_PIPE <- function(Data, Herd=Herd, Observed_caribou=Observed_caribou, Total_collars=Total_collars, Observed_collars=Observed_collars, ...) {
   Data %>%
@@ -214,6 +217,8 @@ CALC_LINC_PET <-  function(Observed_caribou, Total_collars, Observed_collars,...
 #' caribou_range %>%
 #'   ARC.IDENT(land_ownership)
 #'
+#' @importFrom sf st_intersection st_difference st_union st_as_sf
+#' @importFrom dplyr bind_rows
 #' @export
 ARC.IDENT <- function(layer_a, layer_b) {
   int_a_b <- st_intersection(layer_a, layer_b)
@@ -238,6 +243,8 @@ ARC.IDENT <- function(layer_a, layer_b) {
 #' wildlife_habitat %>% CHECK_GEOMETRY()
 #' # Output might show: POLYGON (150), MULTIPOLYGON (3)
 #'
+#' @importFrom sf st_geometry_type
+#' @importFrom forcats fct_count
 #' @export
 CHECK_GEOMETRY <- function(x) {
   st_geometry_type(x) %>% fct_count()
@@ -258,6 +265,8 @@ CHECK_GEOMETRY <- function(x) {
 #' forest_stands %>% CHECK_VALID()
 #' # Output: TRUE (1450), FALSE (12) indicates 12 invalid features
 #'
+#' @importFrom sf st_is_valid
+#' @importFrom forcats fct_count
 #' @export
 CHECK_VALID <-
   function(x) {
@@ -284,6 +293,8 @@ CHECK_VALID <-
 #'   st_transform(3005) %>%  # BC Albers for accurate area
 #'   CALC_HA()
 #'
+#' @importFrom sf st_area
+#' @importFrom dplyr mutate
 #' @export
 CALC_HA <- function(.data) {
   .data %>% mutate(
@@ -318,6 +329,7 @@ CALC_HA <- function(.data) {
 #' forest_layer %>%
 #'   MAKE_VALID_POLYS(precision = 1000)
 #'
+#' @importFrom sf st_set_precision st_make_valid st_collection_extract st_cast
 #' @export
 MAKE_VALID_POLYS <- function(.data, precision) {.data %>%
     st_set_precision(precision) %>%
@@ -363,6 +375,9 @@ MAKE_VALID_POLYS <- function(.data, precision) {.data %>%
 #' collar_points %>%
 #'   MAKE_LINES(Group_Var = animal_id, Date_Time_Var = fix_time)
 #'
+#' @importFrom dplyr group_by arrange mutate row_number lag slice select ungroup
+#' @importFrom sf st_sfc st_union st_cast st_set_crs st_crs st_length
+#' @importFrom purrr map2
 #' @export
 MAKE_LINES <- function (.data, Group_Var, Date_Time_Var){
   .data %>%
@@ -411,13 +426,15 @@ MAKE_LINES <- function (.data, Group_Var, Date_Time_Var){
 #' @param MAX_COL Name of column to take the maximum value from when features overlap
 #' @param FIRST_COL Name of column to take the first value from when features overlap
 #'
-#' @return An sf object with non-overlapping polygon geometries and three new columns:
-#'   \item{[LIST_COL]_LIST}{Semicolon-separated list of values from overlapping features}
-#'   \item{[FIRST_COL]_FIRST}{First value from overlapping features}
-#'   \item{[MAX_COL]_MAX}{Maximum value from overlapping features}
+#' @return An sf object with non-overlapping polygon geometries and three new columns
+#'   with names constructed from the input column names plus suffixes:
+#'   \item{LIST_COL_LIST}{Semicolon-separated list of values from overlapping features}
+#'   \item{FIRST_COL_FIRST}{First value from overlapping features}
+#'   \item{MAX_COL_MAX}{Maximum value from overlapping features}
 #'
 #' @note Column names are constructed by appending "_LIST", "_FIRST", and "_MAX"
-#'   to the input column names
+#'   to the input column names. For example, if LIST_COL="habitat_type", the
+#'   output column will be named "habitat_type_LIST"
 #'
 #' @examples
 #' # Flatten overlapping habitat polygons, listing all habitat types
@@ -428,6 +445,9 @@ MAKE_LINES <- function (.data, Group_Var, Date_Time_Var){
 #'     FIRST_COL = "priority"
 #'   )
 #'
+#' @importFrom sf st_intersection st_collection_extract
+#' @importFrom dplyr mutate first
+#' @importFrom purrr map_chr
 #' @export
 FLATTEN_POLYS <- function (.data, LIST_COL, MAX_COL, FIRST_COL) {
   LIST_NAME <-paste0(LIST_COL,"_LIST") 
