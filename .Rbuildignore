@@ -1,0 +1,9 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.git$
+^\.gitignore$
+^README\.md$
+^LICENSE$
+^kml_export_functions\.r$
+^georeferenced_map_functions\.r$
+^misc_functions\.r$

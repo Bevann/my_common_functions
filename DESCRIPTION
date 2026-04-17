@@ -1,0 +1,39 @@
+Package: my_common_functions
+Type: Package
+Title: Spatial Data Utilities for BC Government Workflows
+Version: 0.1.0
+Authors@R: person("Bevan", "Ernst", 
+                  email = "Bevan.Ernst@gov.bc.ca",
+                  role = c("aut", "cre"))
+Description: Utility functions for spatial data workflows including themed KML/KMZ 
+    export, georeferenced PDF maps, wildlife population analysis, and spatial 
+    data manipulation. Includes Lincoln-Petersen population estimates, biological 
+    year calculations, movement line generation, and geometry validation tools. 
+    Designed for BC Government spatial and wildlife data workflows.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 4.0.0)
+Imports:
+    sf,
+    xml2,
+    dplyr,
+    tidyr,
+    stringr,
+    viridisLite,
+    basemaps,
+    terra,
+    gdalUtilities,
+    ggplot2,
+    lubridate,
+    forcats,
+    purrr
+Suggests:
+    pals,
+    RColorBrewer,
+    bcdata,
+    testthat (>= 3.0.0)
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.0
+URL: https://github.com/Bevann/my_common_functions
+BugReports: https://github.com/Bevann/my_common_functions/issues

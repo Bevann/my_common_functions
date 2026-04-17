@@ -1,0 +1,28 @@
+# R specific
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+*.Rproj
+.Rproj.user/
+
+# R package specific
+man/*.Rd
+NAMESPACE
+
+# Output files
+*.kml
+*.kmz
+*.pdf
+*.png
+*.jpg
+
+# Temporary files
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# RStudio files
+.Rproj.user
