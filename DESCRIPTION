@@ -3,6 +3,7 @@ Type: Package
 Title: Spatial Data Utilities and Wildlife Analysis Tools
 Version: 0.1.0
 Authors@R: person("Bevan", "Ernst", 
+                  email = "Bevan.Ernst@gov.bc.ca",
                   role = c("aut", "cre"))
 Description: Utility functions for spatial data workflows including themed KML/KMZ 
     export, georeferenced PDF maps, wildlife population analysis, and spatial 
