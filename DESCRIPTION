@@ -10,7 +10,7 @@ Description: Utility functions for spatial data workflows including themed KML/K
     data manipulation. Includes Lincoln-Petersen population estimates, biological 
     year calculations, movement line generation, and geometry validation tools. 
     Designed for BC Government spatial and wildlife data workflows.
-License: MIT + file LICENSE
+License: Apache License 2.0 | file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 4.0.0)

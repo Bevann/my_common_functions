@@ -12,7 +12,7 @@ This repository contains utility scripts organized into three main categories:
 
 ---
 
-## ðŸ“¦ Installation
+## 📦 Installation
 
 ### Install as R Package (Recommended)
 
@@ -60,7 +60,7 @@ install.packages(c("pals", "RColorBrewer"))
 
 ---
 
-## ðŸ—ºï¸ KML Export Functions
+## 🗺️ KML Export Functions
 
 ### Overview
 
@@ -68,13 +68,13 @@ Export sf objects to themed KML/KMZ files with professional styling for viewing 
 
 ### Key Features
 
-- âœ… **Multi-geometry support**: Points, lines, and polygons
-- ðŸŽ¨ **Thematic coloring**: Categorical or continuous color schemes
-- ðŸ·ï¸ **Smart labeling**: Automatic or field-based labels
-- ðŸŒ **UTF-8 encoding**: Preserves special characters and diacritics (e.g., Ã©, Ã±, Ã¼)
-- ðŸŽ­ **Custom palettes**: viridis, RColorBrewer, pals, or custom colors
-- ðŸ“Š **Clean popups**: Field names without prefixes in Google Earth attribute tables
-- ðŸ’¾ **Flexible output**: KML (uncompressed) or KMZ (compressed ZIP)
+- ✅ **Multi-geometry support**: Points, lines, and polygons
+- 🎨 **Thematic coloring**: Categorical or continuous color schemes
+- 🏷️ **Smart labeling**: Automatic or field-based labels
+- 🌍 **UTF-8 encoding**: Preserves special characters and diacritics (e.g., é, ñ, ü)
+- 🎭 **Custom palettes**: viridis, RColorBrewer, pals, or custom colors
+- 📊 **Clean popups**: Field names without prefixes in Google Earth attribute tables
+- 💾 **Flexible output**: KML (uncompressed) or KMZ (compressed ZIP)
 
 ### Main Function: `EXPORT_SF_TO_THEMED_KML()`
 
@@ -219,7 +219,7 @@ colorRampPalette(c("blue", "white", "red"))(100)
 
 ---
 
-## ðŸ“ Georeferenced Map Functions
+## 📍 Georeferenced Map Functions
 
 ### Overview
 
@@ -227,11 +227,11 @@ Create publication-quality georeferenced PDF maps with integrated basemaps from 
 
 ### Key Features
 
-- ðŸ—ºï¸ **Multiple basemap sources**: ESRI, OpenStreetMap, Carto, and more
-- ðŸ“ **Smart extent management**: Configurable map boundaries and basemap coverage
-- ðŸŽ¯ **Projection handling**: Automatic transformation to EPSG:3857
-- ðŸ“„ **Georeferenced output**: PDFs with embedded coordinate metadata
-- ðŸŽ¨ **Customizable styling**: Integration with ggplot2 for overlay layers
+- 🗺️ **Multiple basemap sources**: ESRI, OpenStreetMap, Carto, and more
+- 📐 **Smart extent management**: Configurable map boundaries and basemap coverage
+- 🎯 **Projection handling**: Automatic transformation to EPSG:3857
+- 🔄 **Georeferenced output**: PDFs with embedded coordinate metadata
+- 🎨 **Customizable styling**: Integration with ggplot2 for overlay layers
 
 ### Main Function: `CREATE_BASEMAP_PLOT()`
 
@@ -326,7 +326,7 @@ ggsave("watershed_map.pdf", map, width = 10, height = 8)
 
 ---
 
-## ðŸ¦Œ Wildlife & Spatial Analysis Functions
+## 🦌 Wildlife & Spatial Analysis Functions
 
 ### Overview
 
@@ -530,7 +530,7 @@ cutblocks_sf %>%
 
 ---
 
-## ðŸ”§ Workflow Tips
+## 🔧 Workflow Tips
 
 ### Complete Workflow: Field Data to Google Earth
 
@@ -691,7 +691,7 @@ EXPORT_SF_TO_THEMED_KML(
 
 ---
 
-## ðŸ› Troubleshooting
+## 🛠️ Troubleshooting
 
 ### KML Export Issues
 
@@ -704,7 +704,7 @@ EXPORT_SF_TO_THEMED_KML(
 **Problem**: Labels not appearing
 - **Solution**: Specify `label_field` parameter, or ensure your data has character fields for auto-detection
 
-**Problem**: UTF-8 characters (Ã©, Ê”, etc.) showing as garbled text
+**Problem**: UTF-8 characters (é, ʼn, etc.) showing as garbled text
 - **Solution**: Functions automatically preserve UTF-8 encoding - ensure your source data is UTF-8 encoded
 
 ### Basemap Issues
@@ -720,7 +720,7 @@ EXPORT_SF_TO_THEMED_KML(
 
 ---
 
-## ðŸ“ Notes
+## 📝 Notes
 
 - **Coordinate Systems**: KML files always use WGS84 (EPSG:4326). Functions handle transformation automatically.
 - **File Sizes**: KMZ files are compressed and smaller than KML. Use KMZ for sharing large datasets.
@@ -728,11 +728,11 @@ EXPORT_SF_TO_THEMED_KML(
 
 ---
 
-## ðŸ“„ License
+## 📄 License
 
-Internal use - BC Government
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) file for details.
 
-## ðŸ‘¤ Author
+## 👤 Author
 
 Bevan Ernst  
 BC Ministry of Water, Land and Air Protection  
@@ -740,7 +740,7 @@ Thompson Region
 
 ---
 
-## ðŸ”— Related Resources
+## 🔗 Related Resources
 
 - [bcdata R package](https://github.com/bcgov/bcdata) - Access BC Government spatial data
 - [sf package documentation](https://r-spatial.github.io/sf/) - Spatial data in R
