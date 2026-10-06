@@ -4,11 +4,12 @@ A collection of R utility functions for spatial data processing, visualization, 
 
 ## Overview
 
-This repository contains utility scripts organized into three main categories:
+This repository contains utility scripts organized into four main categories:
 
 1. **kml_export_functions.r** - Export spatial data to themed KML/KMZ files for Google Earth
 2. **georeferenced_map_functions.r** - Create georeferenced PDF maps with basemaps
 3. **misc_functions.r** - Wildlife population analysis, spatial operations, and data processing utilities
+4. **canon_gps_log_functions.R** - Import Canon camera GPS logs as points/lines and export them to files or file geodatabases
 
 ---
 
@@ -540,6 +541,53 @@ cutblocks_sf %>%
 
 ---
 
+## 📷 Canon Camera GPS Log Functions
+
+### Overview
+
+Functions in **canon_gps_log_functions.R** turn the GPS log files written by Canon cameras (e.g. `26092300.LOG`, NMEA sentences) into spatial data. Positions and times come from `$GPGGA` sentences; the date comes from the matching `$GPRMC` sentence, because `$GPGGA` has no date. UTC times are converted to local time using the time zone found at the GPS coordinates (`lutz`, most common zone across the log).
+
+### Functions
+
+| Function | Purpose |
+|----------|---------|
+| `IMPORT_LOG_POINTS(INPUT_FILE)` | Read a `.LOG` file into an sf POINT object (EPSG:4326) with `date_time_UTC`, `DATE_TIME_LOCAL`, `Date` and `Time` columns. Errors if a time zone can't be determined or no single time zone is most common. |
+| `MAKE_DAILY_LINES(IMPORT_POINTS)` | Connect points ordered by local time into one LINESTRING per `Date`. |
+| `MAKE_DETAILED_LINES(IMPORT_POINTS)` | Create one two-point segment per time step (never crossing midnight), projected to BC Albers (EPSG:3005), with `START_TIME_LOCAL`, `END_TIME_LOCAL`, `Duration_Minutes`, `LENGTH_METERS`, `LENGTH_KM` and `SPEED_KMH`. |
+| `EXPORT_LOG_POINTS(INPUT_FILE, OUTPUT_FILE, OUTPUT_DIR, OUTPUT_FORMAT)` | Import the log and write the points. |
+| `EXPORT_LOG_LINES_DATE(...)` | Import the log and write the daily lines. |
+| `EXPORT_LOG_LINES_DETAILED(...)` | Import the log and write the per-time-step lines. |
+
+All three export functions share the same arguments:
+
+- `INPUT_FILE` - path to the camera `.LOG` file
+- `OUTPUT_FILE` - file name without extension (or the layer name for a geodatabase)
+- `OUTPUT_DIR` - output folder; if the path ends in `.gdb` the data is written as a feature class into that file geodatabase (needs the GDAL OpenFileGDB driver)
+- `OUTPUT_FORMAT` - extension including the dot (`".shp"`, `".kml"`, `".gpkg"`); ignored for geodatabases
+
+Internal helpers `convert_lat()` and `convert_long()` convert NMEA `ddmm.mmmm` values to decimal degrees (S and W are negative).
+
+### Workflow
+
+```r
+library(my.common.functions)
+
+log_file <- "W:/Photos/Visit/26092300.LOG"
+
+# 1. Inspect the track as points
+pts <- IMPORT_LOG_POINTS(log_file)
+
+# 2. Build lines
+daily    <- MAKE_DAILY_LINES(pts)      # one line per day
+detailed <- MAKE_DETAILED_LINES(pts)   # one segment per time step with speed
+
+# 3. Export directly from the log file
+EXPORT_LOG_POINTS(log_file, "LOG_POINTS", "C:/TEMP", ".shp")
+EXPORT_LOG_LINES_DATE(log_file, "LOG_DAILY", "C:/TEMP", ".kml")
+EXPORT_LOG_LINES_DETAILED(log_file, "LOG_DETAILED", "Output.gdb", "")
+```
+
+---
 ## 🔧 Workflow Tips
 
 ### Complete Workflow: Field Data to Google Earth

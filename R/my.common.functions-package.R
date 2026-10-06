@@ -59,5 +59,9 @@ utils::globalVariables(c(
   "LOCAL_DATE_TIME_LAG",
   "Travel_Length_Km", "Travel_Time_H", "Travel_Speed_KmH",
   "RECNO",
+  "sentence_1", "sentence_2", "sentence_3", "sentence_4", "sentence_5", "sentence_6",
+  "sentence_10", "sentence", "lat_dir", "long_dir", "lat_dd", "long_dd", "rmc_date",
+  "date_time_UTC", "time_zone", "DATE_TIME_LOCAL", "Date", "x", "y", "x_end", "y_end",
+  "START_TIME_LOCAL", "END_TIME_LOCAL", "Duration_Minutes", "LENGTH_METERS",
   "origins"
 ))

@@ -8,7 +8,8 @@ Authors@R: person("Bevan", "Ernst",
 Description: Utility functions for spatial data workflows including themed KML/KMZ 
     export, georeferenced PDF maps, wildlife population analysis, and spatial 
     data manipulation. Includes Lincoln-Petersen population estimates, biological 
-    year calculations, movement line generation, and geometry validation tools.
+    year calculations, movement line generation, geometry validation tools, and
+    import/export of Canon camera GPS logs as points and lines.
 License: Apache License (>= 2.0)
 Encoding: UTF-8
 LazyData: true
@@ -24,11 +25,15 @@ Imports:
     gdalUtilities,
     ggplot2,
     lubridate,
+    lutz,
+    readr,
+    tidyr,
     forcats,
     purrr,
     magrittr,
     grDevices,
     stats,
+    tools,
     utils
 Suggests:
     pals,
@@ -36,6 +41,6 @@ Suggests:
     bcdata,
     testthat (>= 3.0.0)
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 URL: https://github.com/Bevann/my_common_functions
 BugReports: https://github.com/Bevann/my_common_functions/issues
+RoxygenNote: 7.3.3
