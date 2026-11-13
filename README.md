@@ -4,12 +4,13 @@ A collection of R utility functions for spatial data processing, visualization, 
 
 ## Overview
 
-This repository contains utility scripts organized into four main categories:
+This repository contains utility scripts organized into five main categories:
 
 1. **kml_export_functions.r** - Export spatial data to themed KML/KMZ files for Google Earth
 2. **georeferenced_map_functions.r** - Create georeferenced PDF maps with basemaps
 3. **misc_functions.r** - Wildlife population analysis, spatial operations, and data processing utilities
 4. **canon_gps_log_functions.R** - Import Canon camera GPS logs as points/lines and export them to files or file geodatabases
+5. **file_copy_functions.R** - Fast multi-threaded copying of large folders using Windows robocopy
 
 ---
 
@@ -31,7 +32,9 @@ roxygen2::roxygenise()
 
 # Check for build issues
 devtools::document()
-devtools::check()# Install from GitHub (repo name uses underscores)
+devtools::check()
+
+# Install from GitHub (repo name uses underscores)
 devtools::install_github("Bevann/my_common_functions")
 
 # Load the package (package name uses periods)
@@ -42,6 +45,7 @@ library(my.common.functions)
 # Functions are now available directly
 EXPORT_SF_TO_THEMED_KML(my_data, ...)
 CREATE_BASEMAP_PLOT(my_data, ...)
+ROBOCOPY_FOLDER("W:/data/big_folder", "D:/backup/big_folder")
 ```
 
 ### Alternative: Source Individual Files
@@ -53,7 +57,10 @@ If you prefer not to install as a package:
 source("R/kml_export_functions.R")
 source("R/georeferenced_map_functions.R")
 source("R/misc_functions.R")
+source("R/file_copy_functions.R")
 ```
+
+`ROBOCOPY_FOLDER()` requires Windows and the optional `processx` package.
 
 ### Dependencies
 
@@ -67,6 +74,9 @@ install.packages(c("sf", "xml2", "dplyr", "tidyr", "stringr",
 
 # Optional: Enhanced color palettes
 install.packages(c("pals", "RColorBrewer"))
+
+# Optional: required by ROBOCOPY_FOLDER()
+install.packages("processx")
 ```
 
 ---
@@ -586,6 +596,49 @@ EXPORT_LOG_POINTS(log_file, "LOG_POINTS", "C:/TEMP", ".shp")
 EXPORT_LOG_LINES_DATE(log_file, "LOG_DAILY", "C:/TEMP", ".kml")
 EXPORT_LOG_LINES_DETAILED(log_file, "LOG_DETAILED", "Output.gdb", "")
 ```
+
+---
+
+## 📁 Fast Folder Copy Functions
+
+### Overview
+
+`ROBOCOPY_FOLDER()` in **file_copy_functions.R** copies an entire (large) folder using the Windows `robocopy` utility with multiple threads, which is far faster than `file.copy()`. It prints the file count, shows a progress bar (by file count) and reports the robocopy exit code when finished.
+
+### Usage
+
+```r
+ROBOCOPY_FOLDER(source_dir, destination_dir, threads = 4, include_subfolders = TRUE)
+```
+
+| Argument | Description |
+|----------|-------------|
+| `source_dir` | Folder to copy from. Must exist. |
+| `destination_dir` | Folder to copy to. Created if missing. |
+| `threads` | Number of copy threads (`/MT`), 1-128. Default `4`. |
+| `include_subfolders` | `TRUE` (default) copies all subfolders, including empty ones (`/E`); `FALSE` copies only files in the top level. |
+
+Returns the robocopy exit code invisibly. Codes 0-7 mean success (e.g. 1 = files copied, 0 = nothing to copy); 8 or higher raises an error.
+
+### Examples
+
+```r
+library(my.common.functions)
+
+# Copy everything with 4 threads
+ROBOCOPY_FOLDER("W:/data/big_folder", "D:/backup/big_folder")
+
+# More threads, top-level files only
+ROBOCOPY_FOLDER("W:/data/big_folder", "D:/backup/big_folder",
+                threads = 16, include_subfolders = FALSE)
+```
+
+### Notes
+
+- Windows only; requires the `processx` package (`install.packages("processx")`).
+- **Safe for the source:** the source folder is only read. Nothing is moved or deleted, and extra files already in the destination are left alone. Files with the same name but a different size/date are overwritten.
+- Do not set the destination inside the source folder.
+- Copies data, attributes and timestamps (`/DCOPY:DAT`) and retries failed files 3 times, 5 seconds apart.
 
 ---
 ## 🔧 Workflow Tips
