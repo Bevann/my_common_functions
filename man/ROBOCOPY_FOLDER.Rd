@@ -31,7 +31,8 @@ much faster than \code{\link[=file.copy]{file.copy()}} for large folders. Uses m
 and shows a progress bar (by file count). The source folder is only read,
 never modified or deleted, and files already in the destination that are not
 in the source are left alone (no \code{/MIR}, \code{/MOVE} or \code{/PURGE}). Files with the
-same name but a different size or date are overwritten.
+same name that are older in the source than in the destination are skipped
+(\code{/XO}); other files follow Robocopy's normal copy criteria.
 }
 \details{
 Requires Windows and the \code{processx} package. Do not point \code{destination_dir}

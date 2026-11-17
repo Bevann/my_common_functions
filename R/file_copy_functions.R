@@ -5,7 +5,8 @@
 #' and shows a progress bar (by file count). The source folder is only read,
 #' never modified or deleted, and files already in the destination that are not
 #' in the source are left alone (no `/MIR`, `/MOVE` or `/PURGE`). Files with the
-#' same name but a different size or date are overwritten.
+#' same name that are older in the source than in the destination are skipped
+#' (`/XO`); other files follow Robocopy's normal copy criteria.
 #'
 #' Requires Windows and the `processx` package. Do not point `destination_dir`
 #' at a folder inside `source_dir`.
@@ -27,90 +28,86 @@
 #'
 #' @export
 ROBOCOPY_FOLDER <- function(
-    source_dir,
-    destination_dir,
-    threads = 4,
-    include_subfolders = TRUE
+  source_dir,
+  destination_dir,
+  threads = 4,
+  include_subfolders = TRUE
 ) {
-    if (.Platform$OS.type != "windows") {
-        stop("robocopy is only available on Windows.")
-    }
-    if (!dir.exists(source_dir)) {
-        stop("Source folder does not exist: ", source_dir)
-    }
-    if (!requireNamespace("processx", quietly = TRUE)) {
-        stop("Please install.packages('processx').")
-    }
-    threads <- as.integer(threads)
-    if (is.na(threads) || threads < 1 || threads > 128) {
-        stop("'threads' must be between 1 and 128.")
-    }
+  if (.Platform$OS.type != "windows") {
+    stop("robocopy is only available on Windows.")
+  }
+  if (!dir.exists(source_dir)) {
+    stop("Source folder does not exist: ", source_dir)
+  }
+  if (!requireNamespace("processx", quietly = TRUE)) {
+    stop("Please install.packages('processx').")
+  }
+  threads <- as.integer(threads)
+  if (is.na(threads) || threads < 1 || threads > 128) {
+    stop("'threads' must be between 1 and 128.")
+  }
 
-    src <- normalizePath(source_dir, winslash = "\\", mustWork = TRUE)
-    dest <- gsub("/", "\\\\", destination_dir)
-    dest <- sub("\\\\+$", "", dest)
+  src <- normalizePath(source_dir, winslash = "\\", mustWork = TRUE)
+  dest <- gsub("/", "\\\\", destination_dir)
+  dest <- sub("\\\\+$", "", dest)
 
-    message("Counting files in source...")
-    total <- length(list.files(
-        src,
-        recursive = include_subfolders,
-        all.files = TRUE,
-        include.dirs = FALSE,
-        no.. = TRUE
-    ))
-    total <- max(total, 1L)
-    message(sprintf(
-        "Found %s files. Copying with %d threads...",
-        format(total, big.mark = ","),
-        threads
-    ))
+  message("Counting files in source...")
+  total <- length(list.files(
+    src,
+    recursive = include_subfolders,
+    all.files = TRUE,
+    include.dirs = FALSE,
+    no.. = TRUE
+  ))
+  total <- max(total, 1L)
+  message(sprintf(
+    "Found %s files. Copying with %d threads...",
+    format(total, big.mark = ","),
+    threads
+  ))
 
-    # processx passes each argument safely, so no quoting is needed
-    args <- c(
-        src,
-        dest,
-        if (include_subfolders) "/E",
-        "/DCOPY:DAT",
-        paste0("/MT:", threads),
-        "/R:3",
-        "/W:5",
-        "/NDL",
-        "/NP",
-        "/NJH",
-        "/NJS",
-        "/NC",
-        "/NS",
-        "/BYTES"
-    )
+  # processx passes each argument safely, so no quoting is needed
+  args <- c(
+    src,
+    dest,
+    if (include_subfolders) "/E",
+    "/DCOPY:DAT",
+    paste0("/MT:", threads),
+    "/R:3",
+    "/W:5",
+    "/NDL",
+    "/NP",
+    "/NJH",
+    "/NJS",
+    "/NC",
+    "/NS",
+    "/XO", # Exclude older files
+    "/BYTES"
+  )
 
-    # Each file processed (copied or skipped) produces one line of stdout
-    proc <- processx::process$new(
-        "robocopy",
-        args,
-        stdout = "|",
-        stderr = "2>&1"
-    )
-    pb <- utils::txtProgressBar(min = 0, max = total, style = 3)
-    done <- 0L
-    repeat {
-        proc$poll_io(500)
-        out <- proc$read_output_lines()
-        if (length(out)) {
-            done <- min(done + sum(nzchar(trimws(out))), total)
-            utils::setTxtProgressBar(pb, done)
-        }
-        if (!proc$is_alive()) break
+  # Each file processed (copied or skipped) produces one line of stdout
+  proc <- processx::process$new("robocopy", args, stdout = "|", stderr = "2>&1")
+  pb <- utils::txtProgressBar(min = 0, max = total, style = 3)
+  done <- 0L
+  repeat {
+    proc$poll_io(500)
+    out <- proc$read_output_lines()
+    if (length(out)) {
+      done <- min(done + sum(nzchar(trimws(out))), total)
+      utils::setTxtProgressBar(pb, done)
     }
-    proc$read_output_lines()
-    utils::setTxtProgressBar(pb, total)
-    close(pb)
+    if (!proc$is_alive()) break
+  }
+  proc$read_output_lines()
+  utils::setTxtProgressBar(pb, total)
+  close(pb)
 
-    status <- proc$get_exit_status()
+  status <- proc$get_exit_status()
 
-    # Robocopy exit codes below 8 indicate success (bitmask of copy results)
-    if (status >= 8) {
-        stop("Robocopy failed with exit code ", status)
-    }
-    message("Robocopy finished (exit code ", status, ").")
-    invisible(status)
+  # Robocopy exit codes below 8 indicate success (bitmask of copy results)
+  if (status >= 8) {
+    stop("Robocopy failed with exit code ", status)
+  }
+  message("Robocopy finished (exit code ", status, ").")
+  invisible(status)
 }
