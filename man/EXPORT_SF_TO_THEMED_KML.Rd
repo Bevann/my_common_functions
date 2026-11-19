@@ -18,7 +18,8 @@ EXPORT_SF_TO_THEMED_KML(
   fill_opacity = 0.6,
   outline_opacity = 0.9,
   icon_scale = 1,
-  format = "kmz"
+  format = "kmz",
+  popup = NULL
 )
 }
 \arguments{
@@ -36,8 +37,9 @@ default Google Earth styling. Supports both categorical and continuous data.}
 \item{outline_field}{Character. Optional field name for outline/border colors.
 If NULL, outlines match fill colors. Default: NULL.}
 
-\item{label_field}{Character. Field name for feature labels. If NULL,
-auto-detects first character field or uses feature index. Default: NULL.}
+\item{label_field}{Character. Field name for the hover label in Google Earth.
+If NULL, uses color_field when specified; otherwise uses the first character
+field, or the feature index if there are no character fields.}
 
 \item{color_palette}{Vector or function. Custom color palette for fill colors.
 Can be a vector of colors, or a function that generates colors. If NULL,
@@ -62,10 +64,13 @@ marker size. Default: 1.0.}
 
 \item{format}{Character. Output format: "kml" (uncompressed) or "kmz" (compressed ZIP).
 If filename has .kml or .kmz extension, that overrides this parameter. Default: "kmz".}
+
+\item{popup}{Character vector of attribute field names to show on click, in
+the supplied order. NULL (default) shows all non-geometry fields; use
+character(0) to show no attributes.}
 }
 \value{
-Invisible NULL. Function is called for the side effect of creating a
-KML/KMZ file. Success messages printed to console.
+The output file path, invisibly. Success messages are printed to the console.
 }
 \description{
 Exports sf spatial objects to KML or KMZ format with thematic styling based
@@ -90,6 +95,9 @@ For categorical data, each unique value gets a distinct color. For continuous
 numeric data, colors are interpolated across the data range. The function
 automatically selects appropriate color palettes but custom palettes can be
 provided via color_palette parameter.
+Hover-only labels use KML normal and highlight styles, which are supported by
+Google Earth; other KML viewers may display labels differently. Line and
+polygon placemarks include an invisible point on the feature for the label.
 }
 \examples{
 \dontrun{
@@ -114,6 +122,7 @@ EXPORT_SF_TO_THEMED_KML(
   sf_object = survey_points,
   color_field = "site_type",
   label_field = "site_name",
+  popup = c("site_name", "site_type"),
   color_palette = c("red", "blue", "green"),
   icon_scale = 1.5,
   output_filename = "sites.kml"

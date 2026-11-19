@@ -466,25 +466,183 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
     placemark <- placemarks[[i]]
     
     # Find or create name element
-    name_node <- xml2::xml_find_first(placemark, ".//d1:name", xml2::xml_ns(kml_doc))
-    if (length(name_node) == 0) {
-      name_node <- xml2::xml_find_first(placemark, ".//name")
-    }
+    name_node <- xml2::xml_find_first(placemark, "./*[local-name()='name']")
     
     # Set label value (ensure UTF-8 encoding)
     label_text <- as.character(label_values[i])
     label_text <- iconv(label_text, from = "UTF-8", to = "UTF-8")
+    if (is.na(label_text)) label_text <- ""
     
     if (length(name_node) > 0) {
       xml2::xml_set_text(name_node, label_text)
     } else {
-      # Create new name node
-      name_xml <- xml2::read_xml(sprintf("<name>%s</name>", label_text))
-      xml2::xml_add_child(placemark, name_xml, .where = 0)
+      xml2::xml_add_child(placemark, "name", label_text, .where = 0)
     }
   }
   
   return(kml_doc)
+}
+
+
+ADD_KML_LABEL_POINTS <- function(kml_doc, sf_object) {
+  ns <- xml2::xml_ns(kml_doc)
+  placemarks <- xml2::xml_find_all(kml_doc, "//d1:Placemark", ns)
+  if (length(placemarks) != nrow(sf_object)) {
+    stop("KML placemark count does not match the number of sf features")
+  }
+  needs_point <- vapply(placemarks, function(placemark) {
+    has_point <- length(xml2::xml_find_all(placemark, ".//*[local-name()='Point']")) > 0
+    has_line_or_polygon <- length(xml2::xml_find_all(
+      placemark, ".//*[local-name()='LineString' or local-name()='Polygon']"
+    )) > 0
+    !has_point && has_line_or_polygon
+  }, logical(1))
+
+  if (any(needs_point)) {
+    # GEOS needs planar coordinates; WGS84 is already the output CRS.
+    geometries <- sf::st_set_crs(sf::st_geometry(sf_object)[needs_point], NA)
+    points <- sf::st_point_on_surface(geometries)
+    if (any(sf::st_is_empty(points))) {
+      stop("Could not create label points for empty geometries")
+    }
+    coordinates <- sf::st_coordinates(points)
+    for (j in seq_along(which(needs_point))) {
+      placemark <- placemarks[[which(needs_point)[j]]]
+      geometry <- xml2::xml_find_first(
+        placemark, "./*[local-name()='LineString' or local-name()='Polygon' or local-name()='MultiGeometry']"
+      )
+      if (length(geometry) == 0) {
+        stop("Could not find KML geometry for label point")
+      }
+      if (xml2::xml_name(geometry) == "MultiGeometry") {
+        multi <- geometry
+      } else {
+        multi <- xml2::xml_add_sibling(geometry, "MultiGeometry", .where = "before")
+        xml2::xml_add_child(multi, geometry)
+        xml2::xml_remove(geometry)
+      }
+      point <- xml2::xml_add_child(multi, "Point")
+      xml2::xml_add_child(point, "coordinates",
+                          sprintf("%.15g,%.15g", coordinates[j, 1], coordinates[j, 2]))
+    }
+  }
+  needs_point
+}
+
+
+# Add normal/highlight styles, hiding only the icons of synthetic label points.
+SET_KML_HOVER_STYLES <- function(kml_doc, label_points) {
+  ns <- xml2::xml_ns(kml_doc)
+  doc_node <- xml2::xml_find_first(kml_doc, "//d1:Document", ns)
+  placemarks <- xml2::xml_find_all(kml_doc, "//d1:Placemark", ns)
+  style_nodes <- xml2::xml_find_all(doc_node, "./*[local-name()='Style']")
+  style_ids <- xml2::xml_attr(style_nodes, "id")
+  urls <- vapply(placemarks, function(placemark) {
+    node <- xml2::xml_find_first(placemark, "./*[local-name()='styleUrl']")
+    if (length(node) == 0) "" else xml2::xml_text(node)
+  }, character(1))
+
+  groups <- unique(data.frame(url = urls, label_point = label_points))
+  for (i in seq_len(nrow(groups))) {
+    url <- groups$url[i]
+    label_point <- groups$label_point[i]
+    base_index <- match(sub("^#", "", url), style_ids)
+    if (nzchar(url) && is.na(base_index)) {
+      stop("Could not find KML style: ", url)
+    }
+
+    map_id <- paste0("hover_label_map_", i)
+    for (state in c("normal", "highlight")) {
+      style_id <- paste0(map_id, "_", state)
+      if (nzchar(url)) {
+        style <- xml2::xml_add_child(doc_node, style_nodes[[base_index]], .where = 0)
+        xml2::xml_set_attr(style, "id", style_id)
+      } else {
+        style <- xml2::xml_add_child(doc_node, "Style", id = style_id, .where = 0)
+      }
+
+      if (label_point) {
+        icon_style <- xml2::xml_find_first(style, "./*[local-name()='IconStyle']")
+        if (length(icon_style) == 0) {
+          icon_style <- xml2::xml_add_child(style, "IconStyle", .where = 0)
+        }
+        icon <- xml2::xml_find_first(icon_style, "./*[local-name()='Icon']")
+        if (length(icon) == 0) {
+          icon <- xml2::xml_add_child(icon_style, "Icon")
+        }
+        href <- xml2::xml_find_first(icon, "./*[local-name()='href']")
+        if (length(href) == 0) {
+          xml2::xml_add_child(icon, "href", "")
+        } else {
+          xml2::xml_set_text(href, "")
+        }
+      }
+
+      label_style <- xml2::xml_find_first(style, "./*[local-name()='LabelStyle']")
+      if (length(label_style) == 0) {
+        line_style <- xml2::xml_find_first(style, "./*[local-name()='LineStyle']")
+        if (length(line_style) > 0) {
+          label_style <- xml2::xml_add_sibling(line_style, "LabelStyle", .where = "before")
+        } else {
+          label_style <- xml2::xml_add_child(style, "LabelStyle")
+        }
+      }
+      scale <- xml2::xml_find_first(label_style, "./*[local-name()='scale']")
+      if (length(scale) == 0) {
+        xml2::xml_add_child(label_style, "scale", if (state == "normal") "0" else "1")
+      } else {
+        xml2::xml_set_text(scale, if (state == "normal") "0" else "1")
+      }
+    }
+
+    map <- xml2::xml_add_child(doc_node, "StyleMap", id = map_id, .where = 0)
+    for (state in c("normal", "highlight")) {
+      pair <- xml2::xml_add_child(map, "Pair")
+      xml2::xml_add_child(pair, "key", state)
+      xml2::xml_add_child(pair, "styleUrl", paste0("#", map_id, "_", state))
+    }
+    for (placemark in placemarks[urls == url & label_points == label_point]) {
+      style_url <- xml2::xml_find_first(placemark, "./*[local-name()='styleUrl']")
+      if (length(style_url) == 0) {
+        name <- xml2::xml_find_first(placemark, "./*[local-name()='name']")
+        xml2::xml_add_sibling(name, "styleUrl", paste0("#", map_id), .where = "after")
+      } else {
+        xml2::xml_set_text(style_url, paste0("#", map_id))
+      }
+    }
+  }
+  kml_doc
+}
+
+
+SET_KML_POPUPS <- function(kml_doc, sf_object, popup) {
+  attributes <- sf::st_drop_geometry(sf_object)
+  escape_html <- function(value) {
+    value <- gsub("&", "&amp;", value, fixed = TRUE)
+    value <- gsub("<", "&lt;", value, fixed = TRUE)
+    value <- gsub(">", "&gt;", value, fixed = TRUE)
+    value <- gsub('"', "&quot;", value, fixed = TRUE)
+    gsub("'", "&#39;", value, fixed = TRUE)
+  }
+  ns <- xml2::xml_ns(kml_doc)
+  placemarks <- xml2::xml_find_all(kml_doc, "//d1:Placemark", ns)
+  for (i in seq_along(placemarks)) {
+    rows <- vapply(popup, function(field) {
+      value <- attributes[[field]][i]
+      if (is.list(value)) value <- value[[1]]
+      value <- as.character(value)
+      value[is.na(value)] <- ""
+      paste0("<tr><th>", escape_html(field), "</th><td>",
+             escape_html(paste(value, collapse = ", ")), "</td></tr>")
+    }, character(1))
+    description <- paste0('<table border="1" cellspacing="0" cellpadding="4">',
+                          paste(rows, collapse = ""), "</table>")
+    old_description <- xml2::xml_find_all(placemarks[[i]], "./*[local-name()='description']")
+    xml2::xml_remove(old_description)
+    name <- xml2::xml_find_first(placemarks[[i]], "./*[local-name()='name']")
+    xml2::xml_add_sibling(name, "description", description, .where = "after")
+  }
+  kml_doc
 }
 
 
@@ -507,8 +665,9 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
 #'   default Google Earth styling. Supports both categorical and continuous data.
 #' @param outline_field Character. Optional field name for outline/border colors. 
 #'   If NULL, outlines match fill colors. Default: NULL.
-#' @param label_field Character. Field name for feature labels. If NULL, 
-#'   auto-detects first character field or uses feature index. Default: NULL.
+#' @param label_field Character. Field name for the hover label in Google Earth.
+#'   If NULL, uses color_field when specified; otherwise uses the first character
+#'   field, or the feature index if there are no character fields.
 #' @param color_palette Vector or function. Custom color palette for fill colors.
 #'   Can be a vector of colors, or a function that generates colors. If NULL, 
 #'   uses viridis for continuous data or pals::alphabet for categorical. Default: NULL.
@@ -525,9 +684,11 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
 #'   marker size. Default: 1.0.
 #' @param format Character. Output format: "kml" (uncompressed) or "kmz" (compressed ZIP).
 #'   If filename has .kml or .kmz extension, that overrides this parameter. Default: "kmz".
+#' @param popup Character vector of attribute field names to show on click, in
+#'   the supplied order. NULL (default) shows all non-geometry fields; use
+#'   character(0) to show no attributes.
 #'
-#' @return Invisible NULL. Function is called for the side effect of creating a 
-#'   KML/KMZ file. Success messages printed to console.
+#' @return The output file path, invisibly. Success messages are printed to the console.
 #'
 #' @details
 #' The function performs the following operations:
@@ -545,6 +706,9 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
 #' numeric data, colors are interpolated across the data range. The function
 #' automatically selects appropriate color palettes but custom palettes can be
 #' provided via color_palette parameter.
+#' Hover-only labels use KML normal and highlight styles, which are supported by
+#' Google Earth; other KML viewers may display labels differently. Line and
+#' polygon placemarks include an invisible point on the feature for the label.
 #'
 #' @examples
 #' \dontrun{
@@ -569,6 +733,7 @@ SET_KML_LABELS <- function(kml_doc, sf_object, label_field = NULL) {
 #'   sf_object = survey_points,
 #'   color_field = "site_type",
 #'   label_field = "site_name",
+#'   popup = c("site_name", "site_type"),
 #'   color_palette = c("red", "blue", "green"),
 #'   icon_scale = 1.5,
 #'   output_filename = "sites.kml"
@@ -601,7 +766,8 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
                                     fill_opacity = 0.6,
                                     outline_opacity = 0.9,
                                     icon_scale = 1.0,
-                                    format = "kmz") {
+                                    format = "kmz",
+                                    popup = NULL) {
   
   # Validation------
   if (!inherits(sf_object, "sf")) {
@@ -633,9 +799,17 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
   
   # Check if label_field exists
   if (!is.null(label_field)) {
-    if (!label_field %in% names(sf_object)) {
+    if (!is.character(label_field) || length(label_field) != 1L ||
+        is.na(label_field) || !label_field %in% names(sf::st_drop_geometry(sf_object))) {
       stop(paste0("label_field '", label_field, "' not found in sf_object"))
     }
+  }
+
+  attribute_fields <- names(sf::st_drop_geometry(sf_object))
+  if (is.null(popup)) {
+    popup <- attribute_fields
+  } else if (!is.character(popup) || anyNA(popup) || any(!popup %in% attribute_fields)) {
+    stop("popup must be a character vector of non-geometry field names in sf_object")
   }
   
   # Determine format from filename extension if provided------
@@ -741,7 +915,13 @@ EXPORT_SF_TO_THEMED_KML <- function(sf_object,
   }
   
   # Set labels------
+  if (is.null(label_field)) {
+    label_field <- color_field
+  }
   kml_doc <- SET_KML_LABELS(kml_doc, sf_object, label_field)
+  label_points <- ADD_KML_LABEL_POINTS(kml_doc, sf_object)
+  kml_doc <- SET_KML_HOVER_STYLES(kml_doc, label_points)
+  kml_doc <- SET_KML_POPUPS(kml_doc, sf_object, popup)
   
   # Prepare output path------
   if (format == "kmz") {

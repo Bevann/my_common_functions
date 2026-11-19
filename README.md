@@ -108,7 +108,8 @@ Export sf objects to themed KML/KMZ files with professional styling for viewing 
 | `output_location` | character | `getwd()` | Directory for output file |
 | `color_field` | character | `NULL` | Field name for thematic coloring |
 | `outline_field` | character | `NULL` | Field name for outline colors (optional) |
-| `label_field` | character | `NULL` | Field for labels (auto-detected if NULL) |
+| `label_field` | character | `NULL` | Hover label field; defaults to `color_field`, then the first character field, then the feature index. Line and polygon placemarks include an invisible label point. |
+| `popup` | character vector | `NULL` | Fields shown on click; NULL shows all attributes, `character(0)` shows none |
 | `color_palette` | vector/function | `NULL` | Custom color palette |
 | `outline_palette` | vector/function | `NULL` | Custom outline palette |
 | `outline_color` | character | `"#000000"` | Static outline color if no palette |
@@ -153,6 +154,7 @@ EXPORT_SF_TO_THEMED_KML(
   sf_object = survey_points,
   color_field = "site_type",
   label_field = "site_name",
+  popup = c("site_name", "site_type"),
   color_palette = c("red", "blue", "green", "yellow"),
   icon_scale = 1.5,  # Make markers larger
   output_filename = "field_sites.kml"  # .kml extension = uncompressed
